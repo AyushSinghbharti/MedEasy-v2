@@ -14,14 +14,13 @@ import {
   PenTool,
 } from "lucide-react";
 import PatientContext from "../../providers/PatientProvider";
-import AuthContext from "../../providers/AuthProvider";
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
 
 const ChatHome = () => {
-  const { fetchPatients, patientList, loading, setLoading } = useContext(PatientContext);
-  const { authTokens } = useContext(AuthContext);
+  const { fetchPatients, patientList, loading, setLoading, fetchQuestion } =
+    useContext(PatientContext);
   const [questions, setQuestions] = useState([]);
   const [patients, setPatients] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -31,6 +30,7 @@ const ChatHome = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [activeRecordingQuestion, setActiveRecordingQuestion] = useState(null);
+  const [lastTranscriptValue, setLastTranscriptValue] = useState("");
 
   const {
     transcript,
@@ -40,7 +40,6 @@ const ChatHome = () => {
     isMicrophoneAvailable,
   } = useSpeechRecognition();
 
-  const [lastTranscriptValue, setLastTranscriptValue] = useState("");
 
   useEffect(() => {
     if (activeRecordingQuestion && selectedPatient && transcript) {
@@ -89,37 +88,22 @@ const ChatHome = () => {
   }, [patientList]);
 
   useEffect(() => {
-      fetchQuestions("Lets Start");
-  }, [selectedPatient]);  
+    if (selectedPatient) {
+      updateQuestions("Lets Started");
+    }
+  }, [selectedPatient]);
 
-  const fetchQuestions = async (message) => {
-    console.log(selectedPatient?.id);
-    try {
-      let response = await fetch(`http://127.0.0.1:8000/chat/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authTokens.access}`,
-        },
-        body: JSON.stringify({
-          patient_id: selectedPatient.id,
-          message: message,
-        }),
-      });
-
-      const data = await response.json(); // Optional: parse the response
-      console.log("Response:", data);
-
+  const updateQuestions = async (message) => {
+    const data = await fetchQuestion(selectedPatient.id, message);
+    console.log(data);
+    if (data) {
       setQuestions((prevQuestions) => [
         ...prevQuestions,
         {
           id: prevQuestions.length + 1,
-          question: data.response,
+          question: data,
         },
       ]);
-      
-    } catch (error) {
-      console.error("Error fetching questions:", error);
     }
   };
 
@@ -172,7 +156,7 @@ const ChatHome = () => {
         handleStopListening();
       }
 
-      fetchQuestions(answers[selectedPatient.id][questionId]);
+      updateQuestions(answers[selectedPatient.id][questionId]);
       toggleQuestion(questionId);
     }
   };
@@ -438,16 +422,16 @@ const ChatHome = () => {
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-3">
                           <div
-                            className={`flex items-center justify-center w-8 h-8 rounded-full text-white font-semibold ${
+                            className={`flex items-center justify-center w-10 h-10 rounded-full text-white ${
                               isAnswered ? "bg-green-500" : "bg-gray-600"
                             }`}
                           >
                             {index + 1}
                           </div>
                           <p
-                            className={`font-medium text-lg ${
+                            className={`font-medium text-lg mr-5 ${
                               isAnswered ? "text-green-800" : "text-gray-800"
-                            }`}
+                            }`} style={{ width: "95%"}}
                           >
                             {q.question}
                           </p>
@@ -546,8 +530,8 @@ const ChatHome = () => {
                           >
                             {isAnswered ? (
                               <>
-                                <CheckCircle size={18} />
-                                <span>Answer Saved</span>
+                                <Send size={18} />
+                                <span>Save Answer</span>
                               </>
                             ) : (
                               <>
