@@ -14,41 +14,15 @@ import {
   PenTool,
 } from "lucide-react";
 import PatientContext from "../../providers/PatientProvider";
+import AuthContext from "../../providers/AuthProvider";
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
 
-const questions = [
-  {
-    id: 1,
-    question:
-      "Describe the cognitive processes involved in decision-making. How do factors such as biases and emotions influence decision-making outcomes?",
-  },
-  {
-    id: 2,
-    question:
-      "Explain the role of classical and operant conditioning in shaping human behavior. Provide real-life examples to illustrate your explanation.",
-  },
-  {
-    id: 3,
-    question:
-      "Discuss the psychological impact of prolonged social isolation on individuals. What coping mechanisms can help mitigate these effects?",
-  },
-  {
-    id: 4,
-    question:
-      "How does childhood trauma affect personality development and mental health in adulthood?",
-  },
-  {
-    id: 5,
-    question:
-      "Explain the difference between intrinsic and extrinsic motivation. How do they impact learning and performance?",
-  },
-];
-
 const ChatHome = () => {
-  const { fetchPatients, patientList, loading, setLoading } =
-    useContext(PatientContext);
+  const { fetchPatients, patientList, loading, setLoading } = useContext(PatientContext);
+  const { authTokens } = useContext(AuthContext);
+  const [questions, setQuestions] = useState([]);
   const [patients, setPatients] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [answers, setAnswers] = useState({});
@@ -114,6 +88,41 @@ const ChatHome = () => {
     setPatients(patientList);
   }, [patientList]);
 
+  useEffect(() => {
+      fetchQuestions("Lets Start");
+  }, [selectedPatient]);  
+
+  const fetchQuestions = async (message) => {
+    console.log(selectedPatient?.id);
+    try {
+      let response = await fetch(`http://127.0.0.1:8000/chat/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authTokens.access}`,
+        },
+        body: JSON.stringify({
+          patient_id: selectedPatient.id,
+          message: message,
+        }),
+      });
+
+      const data = await response.json(); // Optional: parse the response
+      console.log("Response:", data);
+
+      setQuestions((prevQuestions) => [
+        ...prevQuestions,
+        {
+          id: prevQuestions.length + 1,
+          question: data.response,
+        },
+      ]);
+      
+    } catch (error) {
+      console.error("Error fetching questions:", error);
+    }
+  };
+
   const handleAnswerChange = (patientId, questionId, value) => {
     setAnswers((prev) => ({
       ...prev,
@@ -139,7 +148,6 @@ const ChatHome = () => {
   };
 
   const toggleQuestion = (id) => {
-    // If switching questions and still recording, stop recording
     if (listening && activeRecordingQuestion) {
       handleStopListening();
     }
@@ -163,6 +171,8 @@ const ChatHome = () => {
       if (listening && activeRecordingQuestion === questionId) {
         handleStopListening();
       }
+
+      fetchQuestions(answers[selectedPatient.id][questionId]);
       toggleQuestion(questionId);
     }
   };
