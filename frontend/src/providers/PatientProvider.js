@@ -99,12 +99,48 @@ export const PatientProvider = ({ children }) => {
     }
   };
 
+  const fetchQuestion = async (patient_id, message) => {
+    try {
+      const response = await fetch(`${baseURL}/chat/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authTokens.access}`,
+        },
+        body: JSON.stringify({
+          patient_id: patient_id,
+          message: message,
+        }),
+      });
+  
+      const data = await response.json();
+  
+      if (response.status !== 200) {
+        toast.error(`Error: ${data}`, {
+          position: "top-right",
+        });
+        console.log(data);
+        return null;
+      }
+  
+      return data.response;
+    } catch (error) {
+      toast.error(error.message || "Something went wrong", {
+        position: "top-center",
+      });
+      console.error(error);
+      return null;
+    }
+  };
+  
+
   let contextData = {
     registerPatient: registerPatient,
     fetchPatients: fetchPatients,
     patientList: patientList,
     loading: loading,
     setLoading: setLoading,
+    fetchQuestion: fetchQuestion,
   };
 
   return (
