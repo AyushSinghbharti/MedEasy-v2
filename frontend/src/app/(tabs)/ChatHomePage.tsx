@@ -128,6 +128,7 @@ const ChatHome = () => {
       setViewModal(!viewModal);
       return;
     }
+
     setIsSubmitting(true);
     setTimeout(() => {
       console.log("Submitting answers:", answers);
@@ -137,6 +138,19 @@ const ChatHome = () => {
       alert("Responses submitted successfully!");
     }, 1500);
   };
+
+  useEffect(() => {
+    const fun = () => {
+      if (selectedPatient?.id === "948aca86-ca08-4270-bf86-7b7faa97529f") {
+        setAnswers((prev) => ({
+          ...prev,
+          [selectedPatient.id]: { completed: true },
+        }));
+      }
+    };
+
+    fun();
+  }, [selectedPatient]);
 
   const getProgress = (patientId) => {
     if (!answers[patientId]) return 0;
@@ -667,13 +681,7 @@ const ChatHome = () => {
               {selectedPatient.id === "948aca86-ca08-4270-bf86-7b7faa97529f" ? (
                 <button
                   onClick={handleSubmit}
-                  className={`relative overflow-hidden px-8 py-3 rounded-lg font-semibold shadow-lg flex items-center gap-2 transition-all ${
-                    getProgress(selectedPatient.id) > 0
-                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      : isSubmitting
-                      ? "bg-gray-500 text-white cursor-wait"
-                      : "bg-gray-700 text-white hover:bg-gray-800"
-                  }`}
+                  className={`relative overflow-hidden px-8 py-3 rounded-lg font-semibold shadow-lg flex items-center gap-2 transition-all ${"bg-gray-700 text-white hover:bg-gray-800"}`}
                 >
                   <>
                     <Award size={20} />
