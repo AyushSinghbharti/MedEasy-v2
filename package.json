@@ -17,5 +17,8 @@
   "bugs": {
     "url": "https://github.com/AyushSinghbharti/MedEasy-v2/issues"
   },
-  "homepage": "https://github.com/AyushSinghbharti/MedEasy-v2#readme"
+  "homepage": "https://github.com/AyushSinghbharti/MedEasy-v2#readme",
+  "dependencies": {
+    "concurrently": "^9.1.2"
+  }
 }

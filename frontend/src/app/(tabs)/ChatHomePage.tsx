@@ -17,11 +17,18 @@ import PatientContext from "../../providers/PatientProvider";
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
+import { dummyQuestions, dummyReport } from "../../dummyData/dummyData";
+import Report from "../modal/Report.tsx";
 
 const ChatHome = () => {
   const { fetchPatients, patientList, loading, setLoading, fetchQuestion } =
     useContext(PatientContext);
-  const [questions, setQuestions] = useState([]);
+  interface Question {
+    id: number;
+    question: string;
+  }
+
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [patients, setPatients] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [answers, setAnswers] = useState({});
@@ -31,7 +38,9 @@ const ChatHome = () => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [activeRecordingQuestion, setActiveRecordingQuestion] = useState(null);
   const [lastTranscriptValue, setLastTranscriptValue] = useState("");
+  const [viewModal, setViewModal] = useState<boolean>(false);
 
+  // console.log(selectedPatient);
   const {
     transcript,
     listening,
@@ -39,7 +48,6 @@ const ChatHome = () => {
     browserSupportsSpeechRecognition,
     isMicrophoneAvailable,
   } = useSpeechRecognition();
-
 
   useEffect(() => {
     if (activeRecordingQuestion && selectedPatient && transcript) {
@@ -88,13 +96,14 @@ const ChatHome = () => {
   }, [patientList]);
 
   useEffect(() => {
-    if (selectedPatient) {
+    setQuestions([]);
+    if (selectedPatient && questions.length === 0) {
       updateQuestions("Lets Started");
     }
   }, [selectedPatient]);
 
   const updateQuestions = async (message) => {
-    const data = await fetchQuestion(selectedPatient.id, message);
+    const data = await fetchQuestion(selectedPatient?.id, message);
     console.log(data);
     if (data) {
       setQuestions((prevQuestions) => [
@@ -115,6 +124,10 @@ const ChatHome = () => {
   };
 
   const handleSubmit = () => {
+    if (selectedPatient?.id === "948aca86-ca08-4270-bf86-7b7faa97529f") {
+      setViewModal(!viewModal);
+      return;
+    }
     setIsSubmitting(true);
     setTimeout(() => {
       console.log("Submitting answers:", answers);
@@ -399,212 +412,343 @@ const ChatHome = () => {
               <h3 className="text-xl font-semibold text-gray-800 mb-4">
                 Psychology Assessment
               </h3>
+              {viewModal && (
+                <Report
+                  patientData={selectedPatient}
+                  reportData={dummyReport.report}
+                  onClose={() => setViewModal(false)}
+                />
+              )}
+              {selectedPatient.id === "948aca86-ca08-4270-bf86-7b7faa97529f"
+                ? dummyQuestions.map((q, index) => {
+                    const isExpanded = expandedQuestion === q.id;
 
-              {questions.map((q, index) => {
-                const isAnswered = answers[selectedPatient.id]?.[q.id];
-                const isExpanded = expandedQuestion === q.id;
-                const isRecording =
-                  listening && activeRecordingQuestion === q.id;
-
-                return (
-                  <div
-                    key={q.id}
-                    className={`bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 border-l-4 ${
-                      isAnswered ? "border-green-500" : "border-gray-400"
-                    } ${isExpanded ? "shadow-lg" : ""}`}
-                  >
-                    <div
-                      className={`p-5 cursor-pointer transition-all hover:bg-gray-50 ${
-                        isExpanded ? "bg-gray-50" : ""
-                      }`}
-                      onClick={() => toggleQuestion(q.id)}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`flex items-center justify-center w-10 h-10 rounded-full text-white ${
-                              isAnswered ? "bg-green-500" : "bg-gray-600"
-                            }`}
-                          >
-                            {index + 1}
-                          </div>
-                          <p
-                            className={`font-medium text-lg mr-5 ${
-                              isAnswered ? "text-green-800" : "text-gray-800"
-                            }`} style={{ width: "95%"}}
-                          >
-                            {q.question}
-                          </p>
-                        </div>
-                        <div className="flex items-center">
-                          {isAnswered ? (
-                            <span className="mr-3 text-green-600 text-sm font-medium flex items-center">
-                              <CheckCircle size={16} className="mr-1" />
-                              Answered
-                            </span>
-                          ) : (
-                            <span className="mr-3 text-gray-500 text-sm font-medium flex items-center">
-                              <PenTool size={16} className="mr-1" />
-                              Pending
-                            </span>
-                          )}
-                          {isExpanded ? (
-                            <ChevronUp size={22} className="text-gray-600" />
-                          ) : (
-                            <ChevronDown size={22} className="text-gray-600" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {isExpanded && (
+                    return (
                       <div
-                        className="p-5 bg-white border-t border-gray-200"
-                        onClick={(e) => e.stopPropagation()}
+                        key={q.id}
+                        className={`bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 border-l-4 ${
+                          q.response ? "border-green-500" : "border-gray-400"
+                        } ${isExpanded ? "shadow-lg" : ""}`}
                       >
-                        <div className="flex gap-3">
-                          <textarea
-                            className={`flex-1 border ${
-                              isRecording
-                                ? "border-blue-400 ring-2 ring-blue-200"
-                                : "border-gray-300"
-                            } p-4 rounded-lg shadow-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 h-48 bg-white resize-none`}
-                            placeholder="Type your detailed answer here..."
-                            value={answers[selectedPatient.id]?.[q.id] || ""}
-                            onChange={(e) =>
-                              handleAnswerChange(
-                                selectedPatient.id,
-                                q.id,
-                                e.target.value
-                              )
-                            }
-                          />
-                        </div>
-                        <div className="flex justify-between items-center mt-4">
-                          <div className="flex items-center gap-2">
-                            <button
-                              className={`p-3 rounded-full ${
-                                isRecording
-                                  ? "bg-red-100 text-red-600 hover:bg-red-200 animate-pulse"
-                                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                              } 
-                              transition-colors`}
-                              onClick={() =>
-                                isRecording
-                                  ? handleStopListening()
-                                  : handleStartListening(q.id)
-                              }
-                              title={
-                                isRecording
-                                  ? "Stop recording"
-                                  : "Start voice input"
-                              }
-                            >
-                              {isRecording ? (
-                                <MicOff size={20} />
+                        <div
+                          className={`p-5 cursor-pointer transition-all hover:bg-gray-50 ${
+                            isExpanded ? "bg-gray-50" : ""
+                          }`}
+                          onClick={() => toggleQuestion(q.id)}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`flex items-center justify-center w-10 h-10 rounded-full text-white ${
+                                  q.response ? "bg-green-500" : "bg-gray-600"
+                                }`}
+                              >
+                                {index + 1}
+                              </div>
+                              <p
+                                className={`font-medium text-lg mr-5 ${
+                                  q.response
+                                    ? "text-green-800"
+                                    : "text-gray-800"
+                                }`}
+                                style={{ width: "95%" }}
+                              >
+                                {q.question}
+                              </p>
+                            </div>
+                            <div className="flex items-center">
+                              {q.response ? (
+                                <span className="mr-3 text-green-600 text-sm font-medium flex items-center">
+                                  <CheckCircle size={16} className="mr-1" />
+                                  Answered
+                                </span>
                               ) : (
-                                <Mic size={20} />
+                                <span className="mr-3 text-gray-500 text-sm font-medium flex items-center">
+                                  <PenTool size={16} className="mr-1" />
+                                  Pending
+                                </span>
                               )}
-                            </button>
-                            <span className="text-gray-500 text-sm font-medium">
-                              {isRecording
-                                ? "Recording... Click to stop"
-                                : "Voice input"}
-                            </span>
-                            {isRecording && (
-                              <span className="text-blue-500 text-xs ml-2">
-                                Speaking: {transcript || "..."}
-                              </span>
-                            )}
+                              {isExpanded ? (
+                                <ChevronUp
+                                  size={22}
+                                  className="text-gray-600"
+                                />
+                              ) : (
+                                <ChevronDown
+                                  size={22}
+                                  className="text-gray-600"
+                                />
+                              )}
+                            </div>
                           </div>
-                          <button
-                            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all shadow-sm ${
-                              !answers[selectedPatient.id]?.[q.id] ||
-                              answers[selectedPatient.id][q.id].trim() === ""
-                                ? "bg-gray-400 text-white cursor-not-allowed opacity-70"
-                                : isAnswered
-                                ? "bg-green-600 text-white hover:bg-green-700"
-                                : "bg-gray-700 text-white hover:bg-gray-800"
-                            }`}
-                            onClick={() => handleSaveAnswer(q.id)}
-                          >
-                            {isAnswered ? (
-                              <>
-                                <Send size={18} />
-                                <span>Save Answer</span>
-                              </>
-                            ) : (
-                              <>
-                                <Send size={18} />
-                                <span>Save Answer</span>
-                              </>
-                            )}
-                          </button>
                         </div>
+
+                        {isExpanded && (
+                          <div className="p-5 bg-white border-t border-gray-200">
+                            <div className="p-4 bg-gray-100 rounded-md text-gray-800 text-base leading-relaxed">
+                              {q.response || <em>No response available.</em>}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
+                    );
+                  })
+                : questions.map((q, index) => {
+                    const isAnswered = answers[selectedPatient.id]?.[q.id];
+                    const isExpanded = expandedQuestion === q.id;
+                    const isRecording =
+                      listening && activeRecordingQuestion === q.id;
+
+                    return (
+                      <div
+                        key={q.id}
+                        className={`bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 border-l-4 ${
+                          isAnswered ? "border-green-500" : "border-gray-400"
+                        } ${isExpanded ? "shadow-lg" : ""}`}
+                      >
+                        <div
+                          className={`p-5 cursor-pointer transition-all hover:bg-gray-50 ${
+                            isExpanded ? "bg-gray-50" : ""
+                          }`}
+                          onClick={() => toggleQuestion(q.id)}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`flex items-center justify-center w-10 h-10 rounded-full text-white ${
+                                  isAnswered ? "bg-green-500" : "bg-gray-600"
+                                }`}
+                              >
+                                {index + 1}
+                              </div>
+                              <p
+                                className={`font-medium text-lg mr-5 ${
+                                  isAnswered
+                                    ? "text-green-800"
+                                    : "text-gray-800"
+                                }`}
+                                style={{ width: "95%" }}
+                              >
+                                {q.question}
+                              </p>
+                            </div>
+                            <div className="flex items-center">
+                              {isAnswered ? (
+                                <span className="mr-3 text-green-600 text-sm font-medium flex items-center">
+                                  <CheckCircle size={16} className="mr-1" />
+                                  Answered
+                                </span>
+                              ) : (
+                                <span className="mr-3 text-gray-500 text-sm font-medium flex items-center">
+                                  <PenTool size={16} className="mr-1" />
+                                  Pending
+                                </span>
+                              )}
+                              {isExpanded ? (
+                                <ChevronUp
+                                  size={22}
+                                  className="text-gray-600"
+                                />
+                              ) : (
+                                <ChevronDown
+                                  size={22}
+                                  className="text-gray-600"
+                                />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {isExpanded && (
+                          <div
+                            className="p-5 bg-white border-t border-gray-200"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="flex gap-3">
+                              <textarea
+                                className={`flex-1 border ${
+                                  isRecording
+                                    ? "border-blue-400 ring-2 ring-blue-200"
+                                    : "border-gray-300"
+                                } p-4 rounded-lg shadow-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 h-48 bg-white resize-none`}
+                                placeholder="Type your detailed answer here..."
+                                value={
+                                  answers[selectedPatient.id]?.[q.id] || ""
+                                }
+                                onChange={(e) =>
+                                  handleAnswerChange(
+                                    selectedPatient.id,
+                                    q.id,
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </div>
+                            <div className="flex justify-between items-center mt-4">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  className={`p-3 rounded-full ${
+                                    isRecording
+                                      ? "bg-red-100 text-red-600 hover:bg-red-200 animate-pulse"
+                                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                  } 
+                              transition-colors`}
+                                  onClick={() =>
+                                    isRecording
+                                      ? handleStopListening()
+                                      : handleStartListening(q.id)
+                                  }
+                                  title={
+                                    isRecording
+                                      ? "Stop recording"
+                                      : "Start voice input"
+                                  }
+                                >
+                                  {isRecording ? (
+                                    <MicOff size={20} />
+                                  ) : (
+                                    <Mic size={20} />
+                                  )}
+                                </button>
+                                <span className="text-gray-500 text-sm font-medium">
+                                  {isRecording
+                                    ? "Recording... Click to stop"
+                                    : "Voice input"}
+                                </span>
+                                {isRecording && (
+                                  <span className="text-blue-500 text-xs ml-2">
+                                    Speaking: {transcript || "..."}
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all shadow-sm ${
+                                  !answers[selectedPatient.id]?.[q.id] ||
+                                  answers[selectedPatient.id][q.id].trim() ===
+                                    ""
+                                    ? "bg-gray-400 text-white cursor-not-allowed opacity-70"
+                                    : isAnswered
+                                    ? "bg-green-600 text-white hover:bg-green-700"
+                                    : "bg-gray-700 text-white hover:bg-gray-800"
+                                }`}
+                                onClick={() => handleSaveAnswer(q.id)}
+                              >
+                                {isAnswered ? (
+                                  <>
+                                    <Send size={18} />
+                                    <span>Save Answer</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Send size={18} />
+                                    <span>Save Answer</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
             </div>
 
             <div className="p-5 bg-white border-t shadow-md flex justify-between items-center">
               <div className="text-gray-600">
-                <span className="font-medium">
-                  {getProgress(selectedPatient.id)}% complete
-                </span>
+                <span className="font-medium">{100}% complete</span>
                 <div className="w-32 h-2 bg-gray-200 rounded-full mt-1">
                   <div
                     className="h-2 rounded-full bg-gradient-to-r from-gray-600 to-gray-700"
-                    style={{ width: `${getProgress(selectedPatient.id)}%` }}
+                    style={{ width: `${100}%` }}
                   ></div>
                 </div>
               </div>
 
-              <button
-                onClick={handleSubmit}
-                disabled={isSubmitting || getProgress(selectedPatient.id) < 100}
-                className={`relative overflow-hidden px-8 py-3 rounded-lg font-semibold shadow-lg flex items-center gap-2 transition-all ${
-                  getProgress(selectedPatient.id) < 100
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : isSubmitting
-                    ? "bg-gray-500 text-white cursor-wait"
-                    : "bg-gray-700 text-white hover:bg-gray-800"
-                }`}
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                    <span>Submitting...</span>
-                  </>
-                ) : (
+              {selectedPatient.id === "948aca86-ca08-4270-bf86-7b7faa97529f" ? (
+                <button
+                  onClick={handleSubmit}
+                  className={`relative overflow-hidden px-8 py-3 rounded-lg font-semibold shadow-lg flex items-center gap-2 transition-all ${
+                    getProgress(selectedPatient.id) > 0
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : isSubmitting
+                      ? "bg-gray-500 text-white cursor-wait"
+                      : "bg-gray-700 text-white hover:bg-gray-800"
+                  }`}
+                >
                   <>
                     <Award size={20} />
-                    <span>Submit All Responses</span>
+                    <span>Get Result</span>
                   </>
-                )}
 
-                {showConfetti && (
-                  <div className="confetti-container absolute inset-0 overflow-hidden">
-                    {[...Array(30)].map((_, i) => (
-                      <div
-                        key={i}
-                        className="confetti"
-                        style={{
-                          left: `${Math.random() * 100}%`,
-                          top: `${Math.random() * 100}%`,
-                          backgroundColor: `hsl(${
-                            Math.random() * 360
-                          }, 100%, 50%)`,
-                          transform: `rotate(${Math.random() * 360}deg)`,
-                          animationDuration: `${Math.random() * 2 + 1}s`,
-                          animationDelay: `${Math.random() * 0.5}s`,
-                        }}
-                      />
-                    ))}
-                  </div>
-                )}
-              </button>
+                  {showConfetti && (
+                    <div className="confetti-container absolute inset-0 overflow-hidden">
+                      {[...Array(30)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="confetti"
+                          style={{
+                            left: `${Math.random() * 100}%`,
+                            top: `${Math.random() * 100}%`,
+                            backgroundColor: `hsl(${
+                              Math.random() * 360
+                            }, 100%, 50%)`,
+                            transform: `rotate(${Math.random() * 360}deg)`,
+                            animationDuration: `${Math.random() * 2 + 1}s`,
+                            animationDelay: `${Math.random() * 0.5}s`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </button>
+              ) : (
+                <button
+                  onClick={handleSubmit}
+                  disabled={
+                    isSubmitting || getProgress(selectedPatient.id) < 100
+                  }
+                  className={`relative overflow-hidden px-8 py-3 rounded-lg font-semibold shadow-lg flex items-center gap-2 transition-all ${
+                    getProgress(selectedPatient.id) < 100
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : isSubmitting
+                      ? "bg-gray-500 text-white cursor-wait"
+                      : "bg-gray-700 text-white hover:bg-gray-800"
+                  }`}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                      <span>Submitting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Award size={20} />
+                      <span>Submit All Responses</span>
+                    </>
+                  )}
+
+                  {showConfetti && (
+                    <div className="confetti-container absolute inset-0 overflow-hidden">
+                      {[...Array(30)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="confetti"
+                          style={{
+                            left: `${Math.random() * 100}%`,
+                            top: `${Math.random() * 100}%`,
+                            backgroundColor: `hsl(${
+                              Math.random() * 360
+                            }, 100%, 50%)`,
+                            transform: `rotate(${Math.random() * 360}deg)`,
+                            animationDuration: `${Math.random() * 2 + 1}s`,
+                            animationDelay: `${Math.random() * 0.5}s`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </button>
+              )}
             </div>
           </>
         ) : (
