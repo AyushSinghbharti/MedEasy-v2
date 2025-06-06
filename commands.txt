@@ -15,5 +15,8 @@ backend:
     env\Scripts\activate
     python manage.py runserver
 
+Root Folder:
+    npm i concurrently
+
 root folder:
     npm run dev
