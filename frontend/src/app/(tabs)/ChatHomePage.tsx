@@ -19,6 +19,7 @@ import SpeechRecognition, {
 } from "react-speech-recognition";
 import { dummyQuestions, dummyReport } from "../../dummyData/dummyData";
 import Report from "../modal/Report.tsx";
+import { useNavigate } from "react-router";
 
 const ChatHome = () => {
   const { fetchPatients, patientList, loading, setLoading, fetchQuestion } =
@@ -28,6 +29,7 @@ const ChatHome = () => {
     question: string;
   }
 
+  const navigate = useNavigate();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [patients, setPatients] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -39,8 +41,8 @@ const ChatHome = () => {
   const [activeRecordingQuestion, setActiveRecordingQuestion] = useState(null);
   const [lastTranscriptValue, setLastTranscriptValue] = useState("");
   const [viewModal, setViewModal] = useState<boolean>(false);
+  const [chatHistory, setChatHistory] = useState<any[]>([]);
 
-  // console.log(selectedPatient);
   const {
     transcript,
     listening,
@@ -98,13 +100,12 @@ const ChatHome = () => {
   useEffect(() => {
     setQuestions([]);
     if (selectedPatient && questions.length === 0) {
-      updateQuestions("Lets Started");
+      updateQuestions("Lets Started from scratch");
     }
   }, [selectedPatient]);
 
   const updateQuestions = async (message) => {
     const data = await fetchQuestion(selectedPatient?.id, message);
-    console.log(data);
     if (data) {
       setQuestions((prevQuestions) => [
         ...prevQuestions,
@@ -123,6 +124,12 @@ const ChatHome = () => {
     }));
   };
 
+  const cleanedChatHistory = chatHistory.map((item) => ({
+    id: item.id,
+    question: item.question.question,
+    response: item.reponse, // fix typo when saving too
+  }));
+
   const handleSubmit = () => {
     if (selectedPatient?.id === "948aca86-ca08-4270-bf86-7b7faa97529f") {
       setViewModal(!viewModal);
@@ -131,11 +138,16 @@ const ChatHome = () => {
 
     setIsSubmitting(true);
     setTimeout(() => {
-      console.log("Submitting answers:", answers);
       setIsSubmitting(false);
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 3000);
+      // Get the last question and its answer
+      const lastQuestion = questions[questions.length - 1];
+      if (lastQuestion && selectedPatient && answers[selectedPatient.id]?.[lastQuestion.id]) {
+        handleSaveAnswer(lastQuestion.id, lastQuestion);
+      }
       alert("Responses submitted successfully!");
+      navigate("/finalReport", { state: { chatHistory: cleanedChatHistory, patientDate: selectedPatient } });
     }, 1500);
   };
 
@@ -173,7 +185,7 @@ const ChatHome = () => {
         patient.email.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const handleSaveAnswer = (questionId) => {
+  const handleSaveAnswer = (questionId, question) => {
     if (
       selectedPatient &&
       answers[selectedPatient.id]?.[questionId] &&
@@ -182,11 +194,21 @@ const ChatHome = () => {
       if (listening && activeRecordingQuestion === questionId) {
         handleStopListening();
       }
+      const response = answers[selectedPatient.id][questionId];
+
+      setChatHistory((prevHistory) => [
+        ...prevHistory,
+        { id: questionId, question: question, reponse: response },
+      ]);
 
       updateQuestions(answers[selectedPatient.id][questionId]);
       toggleQuestion(questionId);
     }
   };
+
+  useEffect(() => {
+    console.log(chatHistory);
+  }, [chatHistory]);
 
   const handleStartListening = (questionId) => {
     if (!browserSupportsSpeechRecognition) {
@@ -645,7 +667,7 @@ const ChatHome = () => {
                                     ? "bg-green-600 text-white hover:bg-green-700"
                                     : "bg-gray-700 text-white hover:bg-gray-800"
                                 }`}
-                                onClick={() => handleSaveAnswer(q.id)}
+                                onClick={() => handleSaveAnswer(q.id, q)}
                               >
                                 {isAnswered ? (
                                   <>
